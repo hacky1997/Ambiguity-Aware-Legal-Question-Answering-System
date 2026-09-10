@@ -1,0 +1,300 @@
+# data/sources.yaml
+# ---------------------------------------------------------------------------
+# Corpus and annotation source registry.
+#
+# v2 supersedes v1. v1 assumed the correspondence between the old and new
+# criminal codes had to be hand built from scratch. That was wrong. A
+# machine-readable statute layer with computed cross-code mappings exists
+# under CC BY 4.0. This file records what it does and does not give us.
+#
+# Every entry was fetched and inspected. Nothing here is assumed.
+# ---------------------------------------------------------------------------
+
+version: 2
+jurisdiction: IN
+subject_area: criminal
+
+# ---------------------------------------------------------------------------
+# The finding, stated plainly
+# ---------------------------------------------------------------------------
+finding: >
+  There is no official machine-readable correspondence between the old and
+  new criminal codes. The Ministry published comparison charts for human
+  readers. What exists instead is a computed mapping, published openly and
+  labelled by its publisher as measured rather than official: for each
+  provision of the old code, the closest provision of the new code by text
+  similarity, with a score, plus the next closest matches, plus both full
+  texts side by side.
+
+  That is enough to derive correspondence, split candidates, and no-successor
+  candidates automatically. It is NOT enough to derive materiality, because
+  text similarity does not measure whether the punishment changed. See the
+  worked case below.
+
+worked_case_proving_the_gap:
+  provision: IPC 336 to BNS 125
+  similarity_score: "95%"
+  publisher_label: "Text carried over almost unchanged"
+  what_actually_changed:
+    - "Maximum fine went from 250 rupees to 2,500 rupees"
+    - "New clause (a): where hurt is caused, up to 6 months or 5,000 rupees"
+    - "New clause (b): where grievous hurt is caused, up to 3 years or 10,000 rupees"
+  conclusion: >
+    A provision scored 95 per cent similar and labelled almost unchanged has a
+    tenfold fine increase and two new aggravated sub-offences carrying up to
+    three years imprisonment. Under our finding rules this is a material
+    change requiring F10 (ask for the date), and the similarity score would
+    have routed it to F11 (answer on an assumption). Similarity is a
+    correspondence signal. It is not a materiality signal. Materiality must be
+    derived separately.
+
+# ---------------------------------------------------------------------------
+sources:
+
+  # =========================================================================
+  # PRIMARY. Machine-readable statute layer.
+  # =========================================================================
+
+  - id: indiacode_statute_api
+    tier: primary
+    name: IndiaCode statute API (eCourtsIndia)
+    base: https://indiacode.ecourtsindia.com
+    auth: none
+    license: CC BY 4.0 for the published datasets. Attribution required.
+    verified: fetched and inspected
+    provides:
+      - "Per-section retrieval in structured formats. Markdown confirmed at
+         /{act}/section/{n}.md and Akoma Ntoso XML at .xml. A JSON form is
+         documented by the publisher; confirm the exact path against their
+         API docs before building against it."
+      - "Short codes for the acts we need include bns, bnss, bsa."
+      - "Bulk CSVs published at /data/, described by the publisher as eight
+         datasets under CC BY 4.0, covering the act table and section index.
+         Section text is not in the index CSV and is fetched per provision."
+    constraints:
+      - "The publisher asks that the HTML not be crawled and the API be used
+         instead. Respect this. It is also better engineering."
+      - "Attribution is a licence condition, not a courtesy."
+      - "Statutory text is Parliament's. The structure and mappings are the
+         publisher's original matter."
+    serves_requirements: [6.1, 6.3, 6.4, 9]
+
+  - id: indiacode_cross_code_mapping
+    tier: primary
+    name: Computed cross-code mappings (IPC to BNS, CrPC to BNSS, Evidence to BSA)
+    url_pattern: https://indiacode.ecourtsindia.com/ipc-to-bns/{section}/
+    auth: none
+    license: CC BY 4.0
+    verified: fetched and inspected
+    provides:
+      - "Best-match successor provision with a similarity score"
+      - "Ranked next-closest matches with scores, which the publisher notes
+         are often the answer where a provision was split or merged"
+      - "Both full texts side by side"
+      - "An explicit no-close-match verdict where the law genuinely changed,
+         rather than a guessed successor"
+      - "Repeal date and in-force status per provision"
+      - "Companion mappings for procedure and evidence, not only the penal code"
+    coverage_reported_by_publisher:
+      total_old_provisions: 553
+      carried_over_almost_unchanged: 315
+      close_with_changes: 161
+      distant: 25
+      no_close_match: 52
+      note: >
+        Other sources report the old code as having 511 sections. The
+        difference is a provision-versus-section counting question. Resolve it
+        once, record the resolution, and use one definition throughout.
+    does_not_provide:
+      - "Materiality. See worked_case_proving_the_gap."
+      - "Legal validation. The publisher states plainly that a high score
+         means the words are alike, not that a court has held the provisions
+         equivalent."
+    serves_requirements: [6.2 partial, 8.F6, 8.F7, 8.F8]
+
+  # =========================================================================
+  # DERIVED. Built by us, from the primary sources, by code.
+  # =========================================================================
+
+  - id: derived_correspondence
+    tier: derived
+    name: Correspondence file
+    built_from: [indiacode_cross_code_mapping]
+    method: >
+      Pull every old provision. Record best match, score, and all alternates
+      above a threshold. Assign relationship: unchanged or changed where a
+      single match dominates, split where several alternates score close to
+      the best, no successor where the source reports no close match.
+    automation: high
+    residual_human_work: >
+      Review the boundary cases only: where the best and second scores are
+      close, where the source reports distant, and a random audit sample.
+    serves_requirements: [6.2]
+
+  - id: derived_materiality
+    tier: derived
+    name: Materiality signal
+    built_from: [indiacode_statute_api, indiacode_cross_code_mapping]
+    method: >
+      Both full texts are available for every pair. Punishment language in
+      these codes is formulaic. Extract from each text: maximum imprisonment
+      term, maximum fine, whether fine and imprisonment are alternative or
+      cumulative, presence of a mandatory minimum, and the count and structure
+      of sub-clauses. Diff the pair. Any difference in any extracted field
+      makes the change material, regardless of the similarity score.
+    automation: medium to high
+    residual_human_work: >
+      Two categories only. First, provisions where the extractor cannot parse
+      the punishment confidently. Second, provisions where the similarity
+      score and the punishment diff disagree, which is exactly the IPC 336
+      case and exactly where the value is. Everything else is decided by the
+      extractor.
+    important: >
+      This replaces the two-reviewer requirement on the materiality column
+      with an extractor plus review of the disagreement set. It is a
+      significantly smaller and better defined task, and unlike a subjective
+      column it can be tested.
+    serves_requirements: [6.2 materiality column, 8.F10, 8.F11]
+
+  - id: derived_vocabulary
+    tier: derived
+    name: Provision vocabulary
+    built_from: [indiacode_statute_api]
+    method: >
+      Section headings are the statute's own description of what each
+      provision covers and come free with the section data. Seed the
+      vocabulary from headings in both codes. Extend with terms appearing in
+      judgment text alongside a provision citation.
+    automation: high for legal terms, low for colloquial ones
+    residual_human_work: >
+      Colloquial terms that do not appear in any heading. Add as encountered
+      rather than attempting completeness up front.
+    serves_requirements: [6.3, 7]
+
+  - id: derived_review_set
+    tier: derived
+    name: Review set
+    method: >
+      Questions generated from provisions, with expected behaviour labels.
+    automation: partial
+    circularity_warning: >
+      If review set labels are derived from the same signal the rules use,
+      the measurement tests self-consistency rather than correctness. Labels
+      must come from a different signal. If the rules decide materiality by
+      punishment extraction, the review labels for those cases must come from
+      reading the texts, on a sample, by hand.
+    residual_human_work: "A hand-labelled sample. Unavoidable."
+    serves_requirements: [6.7, 13]
+
+  # =========================================================================
+  # NOT AVAILABLE. Stated so it is not assumed.
+  # =========================================================================
+
+  - id: known_splits
+    tier: unavailable
+    name: High Court disagreements, structured
+    status: >
+      No open structured source located. Determining that two judgments
+      conflict on the same point is unsolved, and determining whether the
+      Supreme Court has since settled it needs a current citator we do not
+      have.
+    recommendation: >
+      Ship with finding F9 defined but unpopulated, switched off, and
+      documented as unpopulated. Do not approximate it. An approximate
+      court-split claim is worse than no claim.
+    serves_requirements: [6.5, 8.F9]
+
+  # =========================================================================
+  # CORPUS. Judgments.
+  # =========================================================================
+
+  - id: in_sc_judgments
+    tier: core
+    name: Indian Supreme Court Judgments
+    fetch: s3
+    bucket: indian-supreme-court-judgments
+    region: ap-south-1
+    anonymous: true
+    coverage: 1950-2025
+    license: CC-BY-4.0
+    formats: [pdf, json, parquet]
+
+  - id: in_hc_judgments
+    tier: core
+    name: Indian High Court Judgments, 25 courts
+    fetch: s3
+    bucket: indian-high-court-judgments
+    region: ap-south-1
+    anonymous: true
+    license: CC-BY-4.0
+    formats: [pdf, json, parquet, tar]
+
+  - id: hf_indian_case_laws
+    tier: convenience
+    name: Indian case law, repackaged for HuggingFace
+    fetch: hf
+    repo: Sumitedu/indian-case-laws
+    upstream: [in_sc_judgments, in_hc_judgments]
+    note: >
+      Normalised repackaging of the same AWS open data, published in sample,
+      structured and full variants. Useful for a fast start. The AWS buckets
+      remain the source of record.
+
+  - id: ildc
+    tier: benchmark
+    name: Indian Legal Documents Corpus
+    fetch: git
+    url: https://github.com/Exploration-Lab/CJPE
+
+  # =========================================================================
+  # CROSS-CHECK ONLY. Unverified provenance.
+  # =========================================================================
+
+  - id: hf_ipc_bns_transformation
+    tier: cross_check
+    name: IPC and BNS transformation table
+    fetch: hf
+    repo: nandhakumarg/IPC_and_BNS_transformation
+    status: >
+      A CSV mapping old sections to new. Provenance not stated, dataset
+      viewer not functioning at time of inspection.
+    use: >
+      Cross-check only. Where it disagrees with the computed mapping, that
+      pair goes into the human review queue. Never a primary source.
+
+  - id: practitioner_tables
+    tier: cross_check
+    name: Published practitioner and publisher concordances
+    status: >
+      Several exist. They disagree with each other on some provisions,
+      including on whether a mapping is to a section or to a specific
+      sub-section.
+    use: >
+      Disagreement between two independent published tables is a useful
+      automatic trigger for the disputed marker. Agreement is weak evidence
+      of correctness, since they may share a common ancestor.
+
+# ---------------------------------------------------------------------------
+# Honest summary of remaining human effort
+# ---------------------------------------------------------------------------
+residual_human_effort:
+  eliminated:
+    - "Building the correspondence file from scratch"
+    - "Building the provision vocabulary from scratch"
+    - "Transcribing statute text"
+    - "Assembling the judgment corpus"
+    - "Bulk materiality assessment across all provisions"
+  remaining:
+    - "Review the correspondence boundary cases and an audit sample"
+    - "Review the materiality disagreement set, which is where the real
+       judgement calls live"
+    - "Hand-label a review set sample using a signal independent of the rules"
+    - "Decide the provision-versus-section counting question once"
+  cannot_be_obtained_from_any_source:
+    - "Legal sign-off that the mappings are correct as a matter of law"
+  consequence: >
+    Without legal sign-off the system must not present itself as legally
+    validated. That is a disclosure requirement, and disclosure is
+    implementable. The system states which mappings are computed, shows both
+    texts so the user can check, and says where its reviewed coverage ends.
+    Section 15 reference mode already provides the mechanism for this.
