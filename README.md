@@ -1,20 +1,18 @@
-# legalrag
-
-Ambiguity-aware question answering over Indian criminal law.
+# Innocent until proven ambiguous: Ambiguity-aware question answering over Indian criminal law.
 
 When a legal question can be read more than one way, most systems pick a
 reading and answer with full confidence. The user never learns a choice was
 made. This one decides between four responses instead: answer, answer with a
 stated assumption, ask one targeted question, or show the alternatives.
 
-The decision is made by rules, not by a model. Same question, same answer,
+Rules, not a model, make the decision. Same question, same answer,
 same recorded reasons, every time.
 
 ## Governing principle
 
 The system asserts text facts and never legal conclusions. Every claim carries
 the exact substring it came from, verified against the source. Where a legal
-conclusion would be needed, both texts are shown and the reader decides.
+conclusion would be needed, both texts are shown, and the reader decides.
 
 A system that makes no legal claims requires no legal validation.
 
