@@ -128,8 +128,8 @@ Access through a single thin adapter of your own, not a framework abstraction, s
 | Graph orchestration | **LangGraph** | Already in use. Still the right fit for typed state, conditional routing and auditability. **Pin the version hard.** The API has churned: the interrupt primitive has moved more than once and checkpoint formats have broken across minor versions. Pin, and read the changelog before upgrading. |
 | API | **FastAPI** | Already in use. Fix the blocking call in the async path. |
 | Async model calls | **httpx** with explicit timeouts | Requirement 11. |
-| Observability | **OpenTelemetry**, GenAI semantic conventions | Vendor neutral. Export wherever you like. |
-| Trace viewer | **Langfuse** self-hosted, or **LangSmith** | Langfuse if you want it free and in your own Docker compose. LangSmith is a paid add-on. |
+| Observability | **OpenTelemetry**, GenAI semantic conventions | Vendor-neutral traces and metrics. The application exports OTLP. |
+| Trace viewer | **Langfuse** via its OTLP endpoint | Chosen over LangSmith for self-hosting and provider-neutral export. |
 | Retries and circuit breaking | **tenacity** plus a small breaker | Requirement 11. Do not pull in a service mesh for this. |
 | Containers | **Docker**, multi stage, non root, with a healthcheck | Current Dockerfile runs as root, has no healthcheck, and cannot start because of a hardcoded Windows model path. |
 | CI | **GitHub Actions** | ruff, mypy, pytest, gitleaks, pip-audit, then the eval gate. |
@@ -140,11 +140,29 @@ Requirement 10. Note carefully what is bought and what is written.
 
 | Guardrail | Approach |
 |---|---|
-| Injection detection | A library is reasonable here. **NVIDIA NeMo Guardrails** or **Guardrails AI**. Do not hand roll a classifier. |
+| Injection detection | **NVIDIA NeMo Guardrails**, integrated through `legalrag/guardrails` and configured under `legalrag/guardrails/config`. Do not hand roll a classifier. |
 | Personal data detection | **Microsoft Presidio**. Solved problem, well tested. |
 | Grounding verification | **Write it yourself.** Requirement 5.2 gives every passage a stable identifier, the generator cites by identifier, and verification becomes a join rather than fuzzy text matching. No library does this against your identifier scheme. |
 | Citation and repeal checks | **Write them yourself.** Both are lookups against your own data. These are the two hard guarantees in v4 and they must not depend on a third party. |
 | Advice boundary and scope | **Write them yourself.** Domain specific. |
+
+Current implementation status: NeMo Guardrails is wired as an optional
+runtime dependency and owns the input/output conversational rail calls. The
+project-owned grounding check remains a mechanical passage-ID join. Qdrant,
+BM25, FastAPI, OpenTelemetry, Presidio, and Postgres audit adapters are now
+implemented as optional integrations with local tests. Langfuse is selected as
+the trace viewer and receives authenticated OTLP traces when `LANGFUSE_HOST`,
+`LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_SECRET_KEY` are configured. Metrics use
+the OTLP metrics endpoint. LangGraph orchestration, model-provider generation,
+tenacity circuit breaking, Docker deployment, and production service wiring
+remain integration work; they are not represented by local test doubles as if
+they were complete.
+
+Compatibility note: the project supports Python 3.12 and 3.13, not 3.14. The
+available NeMo Guardrails 0.17.0 installation in this container fails during
+import under Python 3.14 due to an upstream LangChain/Pydantic compatibility
+issue. The supported Python 3.12 environment must be used for the NeMo smoke
+test before deployment.
 
 ---
 

@@ -117,14 +117,63 @@ class Row:
 def fetch_pair(old_ref: str, *, session: Any, timeout: float) -> ProvisionPair:
     """Fetch one provision pair from the structured endpoints.
 
-    Left as a single seam so the source can be swapped without touching the
-    logic below. Confirm the exact response shape against the publisher's API
-    documentation before first run and adjust the field names here only.
+    The endpoint is intentionally injected as a session so this remains
+    testable without network access. Unknown response shapes fail closed.
     """
-    raise NotImplementedError(
-        "Wire this to the structured statute endpoints. Confirm the JSON field "
-        "names against the publisher's API docs first. Do not scrape the HTML: "
-        "the publisher asks that the API be used instead."
+    section = old_ref.rsplit(" ", 1)[-1]
+    url = f"{SOURCE_BASE}/ipc-to-bns/{section}/"
+    try:
+        response = session.get(url, timeout=timeout)
+        response.raise_for_status()
+        payload = response.json()
+    except (OSError, ValueError, AttributeError) as exc:
+        raise SourceError(f"could not read structured mapping for {old_ref}: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise SourceError(f"structured mapping for {old_ref} was not a JSON object")
+
+    def required_text(*keys: str) -> str:
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, str):
+                return value
+        raise SourceError(f"mapping for {old_ref} has no text field in {keys}")
+
+    old_text = required_text("old_text", "oldText", "source_text")
+    best = payload.get("best_match") or payload.get("bestMatch") or {}
+    if not isinstance(best, dict):
+        best = {}
+    best_ref = best.get("ref") or best.get("section") or payload.get("best_new_ref")
+    best_text = best.get("text") or payload.get("best_new_text")
+    similarity = best.get("similarity", payload.get("similarity"))
+    if best_ref is not None and not isinstance(best_ref, str):
+        raise SourceError(f"mapping for {old_ref} has an invalid successor reference")
+    if best_text is not None and not isinstance(best_text, str):
+        raise SourceError(f"mapping for {old_ref} has an invalid successor text")
+    if similarity is not None and not isinstance(similarity, (int, float)):
+        raise SourceError(f"mapping for {old_ref} has an invalid similarity")
+
+    alternates_raw = payload.get("alternates", payload.get("next_matches", []))
+    if not isinstance(alternates_raw, list):
+        raise SourceError(f"mapping for {old_ref} has invalid alternates")
+    alternates: list[tuple[str, float]] = []
+    for alternate in alternates_raw:
+        if not isinstance(alternate, dict):
+            raise SourceError(f"mapping for {old_ref} has an invalid alternate")
+        ref = alternate.get("ref") or alternate.get("section")
+        score = alternate.get("similarity", alternate.get("score"))
+        if not isinstance(ref, str) or not isinstance(score, (int, float)):
+            raise SourceError(f"mapping for {old_ref} has an invalid alternate")
+        alternates.append((ref, float(score)))
+
+    return ProvisionPair(
+        old_ref=old_ref,
+        old_text=old_text,
+        best_new_ref=best_ref,
+        best_new_text=best_text,
+        similarity=float(similarity) if similarity is not None else None,
+        alternates=alternates,
+        no_close_match=bool(payload.get("no_close_match", payload.get("noCloseMatch", False))),
     )
 
 

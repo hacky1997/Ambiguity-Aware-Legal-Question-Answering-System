@@ -33,8 +33,12 @@ A system that makes no legal claims requires no legal validation.
 | Provision identification | done, tested |
 | Findings engine, F1 to F16 | done, tested |
 | Evaluation harness | done, tested |
-| Correspondence builder | one seam open, needs the source wired |
-| Retrieval, generation, guardrails, API | not started |
+| Correspondence adapter | structured-source seam wired, tested |
+| Ingestion and passage contracts | done, tested |
+| Retrieval fusion and citation verification | done, tested |
+| Conversation, guardrails and audit contracts | done, tested |
+| Qdrant, BM25, Presidio, OpenTelemetry, Postgres and FastAPI adapters | done, tested |
+| LangGraph, generation provider, Langfuse/LangSmith and deployment wiring | adapter boundary remains |
 
 ## Attribution
 

@@ -1,1 +1,20 @@
-{"id":"g1"}
+{"id":"g1","question":"What is section 302?","expected_behaviour":"alternatives","expected_provisions":["IPC 302","BNS 302"],"label_source":"hand"}
+{"id":"g2","question":"What does BNS 103 say?","expected_behaviour":"answer","expected_provisions":["BNS 103"],"label_source":"hand"}
+{"id":"g3","question":"What does IPC 34 mean?","expected_behaviour":"alternatives","expected_provisions":["IPC 34","BNS 3"],"label_source":"hand"}
+{"id":"g4","question":"What does IPC 420 say?","expected_behaviour":"alternatives","expected_provisions":["IPC 420","BNS 318","BNS 319"],"label_source":"hand"}
+{"id":"g5","question":"What does IPC 497 say?","expected_behaviour":"answer","expected_provisions":["IPC 497"],"label_source":"hand"}
+{"id":"g6","question":"Punishment for theft","expected_behaviour":"answer_with_assumption","expected_assumption":"the question refers to the earlier code provision","expected_provisions":["IPC 378","BNS 303"],"label_source":"hand"}
+{"id":"g7","question":"Penalty for a rash and negligent act","expected_behaviour":"ask","expected_provisions":["IPC 336","BNS 125"],"label_source":"hand"}
+{"id":"g8","question":"Punishment for assault","expected_behaviour":"ask","expected_provisions":["IPC 302","IPC 378"],"label_source":"hand"}
+{"id":"g9","question":"Punishment for theft committed in March 2023","expected_behaviour":"answer","expected_provisions":["IPC 378"],"label_source":"hand"}
+{"id":"g10","question":"Punishment for theft on 2025-03-01","expected_behaviour":"answer","expected_provisions":["IPC 378"],"label_source":"hand"}
+{"id":"g11","question":"What is the maximum sentence?","expected_behaviour":"ask","label_source":"hand"}
+{"id":"g12","question":"Who won the match yesterday?","expected_behaviour":"ask","label_source":"hand"}
+{"id":"g13","question":"What does section 999 say?","expected_behaviour":"ask","label_source":"hand"}
+{"id":"g14","question":"How is an FIR registered and what is the sentence for theft?","expected_behaviour":"alternatives","expected_provisions":["IPC 378","BNS 303"],"label_source":"hand"}
+{"id":"g15","question":"Difference between IPC 302 and IPC 378","expected_behaviour":"answer_with_assumption","expected_assumption":"the comparison is being made under the identified provisions","expected_provisions":["IPC 302","IPC 378"],"label_source":"hand"}
+{"id":"g16","question":"An act that endangers human life","expected_behaviour":"ask","expected_provisions":["BNS 125"],"label_source":"hand"}
+{"id":"g17","question":"What does Section 302 IPC say?","expected_behaviour":"answer_with_assumption","expected_assumption":"the earlier code provision is the requested text","expected_provisions":["IPC 302"],"label_source":"hand"}
+{"id":"g18","question":"Punishment u/s 420 of the Indian Penal Code","expected_behaviour":"alternatives","expected_provisions":["IPC 420"],"label_source":"hand"}
+{"id":"g19","question":"BNS section 125(2) explanation","expected_behaviour":"ask","expected_provisions":["BNS 125"],"label_source":"hand"}
+{"id":"g20","question":"What is the offence under IPC 34 on 2025-03-01?","expected_behaviour":"alternatives","expected_provisions":["IPC 34","BNS 3"],"label_source":"hand"}
